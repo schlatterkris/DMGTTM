@@ -1,0 +1,53 @@
+/* 2. FONTS */
+@import url('https://fonts.googleapis.com/css2?family=Crimson+Text:ital,wght@0,400;0,700;1,400&family=Uncial+Antiqua&family=EB+Garamond:ital,wght@0,400;0,700;1,400&display=swap');
+
+/* 1. TAILWIND DIRECTIVES (Must be at the very top) */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+/* 3. VARIABLE CONSOLIDATION */
+:root {
+  --color-parchment: #f4e4bc;
+  --color-ink: #2b1d0e;
+  --color-gold-leaf: #d4af37;
+  --color-dnd-red: #8b0000; /* Darker red for better contrast */
+  --color-void: #0a0a0a;
+  --vault-paper: #f4e4bc; /* Supporting your index.js variables */
+}
+<nav className="flex flex-row flex-nowrap bg-[#0a0a0a] border-b border-[#8b0000]/30 h-12 overflow-x-auto no-scrollbar scroll-smooth">
+/* 4. BASE STYLES */
+body {
+  background-color: var(--color-void);
+  color: var(--color-parchment); /* Change this so we can see the text! */
+  font-family: 'Crimson Text', serif;
+  -webkit-font-smoothing: antialiased;
+  margin: 0;
+  padding: 0;
+}
+
+/* 5. THE VAULT SCROLL COMPONENT */
+.vault-scroll {
+  background: var(--color-parchment);
+  color: var(--color-ink);
+  border: 8px solid #3d2b1f;
+  box-shadow: inset 0 0 50px rgba(0,0,0,0.2), 10px 10px 20px rgba(0,0,0,0.4);
+  font-family: 'EB Garamond', serif; 
+  padding: 2rem;
+  position: relative;
+}
+
+/* 6. SCROLLBAR POLISH */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #1a1a1a;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-dnd-red);
+  border-radius: 5px;
+}
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }

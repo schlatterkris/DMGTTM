@@ -1,0 +1,14 @@
+:root {
+  /* Surface Colors */
+  --parchment-base: #f4e4bc;
+  --parchment-border: #8d6e63;
+  --ink-primary: #2c2421;
+  --ink-secondary: #5d4037;
+  
+  /* Accents */
+  --magic-glow: 0 0 15px rgba(147, 51, 234, 0.4);
+  --danger-red: #991b1b;
+  
+  /* Texture */
+  --paper-grain: url('https://www.transparenttextures.com/patterns/natural-paper.png');
+}

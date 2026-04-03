@@ -1,0 +1,28 @@
+version: "0.2"
+graph:
+  nodes:
+    - id: "architect_01"
+      type: "AgentNode"  # Updated from 'Agent'
+      name: "Chief_Architect"
+      agent_role: "Chief Executive Officer"
+      config:
+        name: "Gemini"
+        model: "gemini-1.5-pro"
+        temperature: 0.2
+    - id: "coder_01"
+      type: "AgentNode"  # Updated from 'Agent'
+      name: "Vibe_Coder"
+      agent_role: "Programmer"
+      config:
+        name: "Gemini"
+        model: "gemini-1.5-pro"
+        temperature: 0.1
+  edges:
+    - source: "architect_01"
+      target: "coder_01"
+
+task: >
+  Build 'The Ultimate DM Vault' using Next.js. 
+  Data is in /public/data/. 
+  Use existing globals.css for a parchment UI.
+  Include logic to verify Gods in gods.json match Planes in planes.json.

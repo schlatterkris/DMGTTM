@@ -1,0 +1,32 @@
+@'
+app_name: "dmgttmd"
+description: >
+  The Ultimate DM Vault & Multiverse Dashboard.
+  CORE MODULES:
+  1. Spellbook: Searchable spells.json with Scrying Orbit UI.
+  2. Monster Vault: Appendix-aware search for creatures.json.
+  3. MONSTER SQUAD (New): An encounter tracker module. 
+     - Add multiple monsters/NPCs to a 'Live Encounter' list.
+     - Track HP/AC for each instance.
+     - 'Clear Dead' button to purge 0 HP entities.
+     - Auto-assign Pocket Bard 'audio_vibe' based on monster type.
+  4. Vibe: Use globals.css and Spellbook.module.css (Parchment/Void).
+framework: "React"
+
+graph:
+  nodes:
+    - id: "CEO"
+      type: "ChatNode"
+      role: "CEO"
+    - id: "Programmer"
+      type: "ChatNode"
+      role: "Programmer"
+    - id: "Reviewer"
+      type: "ChatNode"
+      role: "Reviewer"
+  edges:
+    - source: "CEO"
+      target: "Programmer"
+    - source: "Programmer"
+      target: "Reviewer"
+      '@ | Out-File -FilePath projects/dmgttmd/design.yaml -Encoding utf8

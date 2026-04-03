@@ -1,0 +1,23 @@
+app_name: "MonsterSquad"
+description: >
+  Build a React-based Monster Squad tracker. 
+  1. Use creatures.json from the data folder to populate stats.
+  2. Implement an HP tracker for multiple monsters in one encounter.
+  3. Include a 'Clear Dead' function.
+  4. Integrate Pocket Bard audio station links based on monster type.
+  5. The UI must use the 'Parchment' and 'Void' theme from globals.css.
+framework: "React"
+
+graph:
+  nodes:
+    - id: "CEO"
+      type: "AgentNode"
+    - id: "Programmer"
+      type: "AgentNode"
+    - id: "Reviewer"
+      type: "AgentNode"
+  edges:
+    - source: "CEO"
+      target: "Programmer"
+    - source: "Programmer"
+      target: "Reviewer"

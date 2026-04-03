@@ -1,0 +1,18 @@
+version: "0.2"
+graph:
+  nodes:
+    - id: "architect"
+      type: "agent"
+      name: "Chief_Architect"
+      agent_role: "Chief Executive Officer"
+      config:
+        provider: "google" # This was the missing link!
+        name: "Gemini"
+        model: "gemini-1.5-pro"
+        temperature: 0.2
+  edges: []
+
+task: >
+  Build 'The Ultimate DM Vault' in Next.js. 
+  Data Sources: /public/data/ (monsters.json, spells.json, etc.). 
+  UI Style: Parchment scroll using provided globals.css.

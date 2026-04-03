@@ -1,0 +1,14 @@
+# DMGTTMD
+DMGTTMD: Dynamic Multiverse Graph & Table-Top Management Dashboard
+
+🚀 Project OverviewDMGTTMD is a specialized Content Management System (CMS) and session-orchestration engine designed to handle complex, cross-referenced datasets. The application serves as a unified interface for querying, filtering, and relating heterogeneous data structures (NPCs, Entities, Geographic Planes, and Inventory) in real-time.The core objective is to move away from static documentation and toward a living data ecosystem where updates in one module (e.g., a Plane's status) propagate to dependent modules (e.g., Entities residing on that Plane).🛠 Technical ArchitectureData Layer (JSON-First)The application utilizes a modular JSON architecture. This allows for high portability and "glitch-free" state management.Normalized Schemas: Separate flat files for monsters, magic_items, gods, and planes to prevent data redundancy.Relational Mapping: Logical "foreign keys" connect entities (NPCs) to their environments (Planes) or affiliations (Gods).Frontend (React/Next.js)Stateful UI: Leveraging React hooks to manage real-time session states.Modular Components: Reusable UI components for rendering complex stat blocks and dynamic lists.Export Logic: Functionality to serialize current session states into downloadable JSON objects for persistence.
+
+🏗 Key Features & Logic1. Cross-Module Encounter WeaverAn algorithmic filter that pulls records from multiple JSON sources simultaneously. It validates relationships (e.g., "Entity A" must belong to "Environment B") and pairs the result with a context-aware metadata key (audio_vibe) for environmental synchronization.2. Conflict Resolver & Integrity CheckerA validation suite that ensures referential integrity across the dataset.Example: If a record in gods.json references a home coordinate, the script validates that the coordinate exists in planes.json.3. Dynamic Randomization EngineA "Glitch-free" randomizer that pulls non-conflicting data points from the Monster, Music, and Environment files to generate unique, valid session states instantly.
+
+📂 File Structure & SchemaModulePrimary Keys / Data PointsEntitiesUUID, Stats (HP/AC), Action Arrays, Resistance Flags.EnvironmentGeographic Coordinates, Environmental Hazards, Vibe Metadata.InventoryRarity, Attunement Logic, Weight, Charge Counters.MythosAlignment, Domain Mapping, Planar Coordinates.
+
+🚦 Getting StartedClone the Repository:Bashgit clone https://github.com/schlatterkris/DMGTTMD.git
+Install Dependencies:Bashnpm install
+Run Development Server:Bashnpm run dev
+
+🔮 Future RoadmapGraph Visualization: Implementing a visual node-map to show the relationships between different NPCs and World Locations.API Integration: Transitioning from local JSON files to a headless CMS or NoSQL database for multi-user support.Audio Middleware: Fully integrating the pocket_bard_link key to trigger external audio APIs based on data-driven triggers.

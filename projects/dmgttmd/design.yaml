@@ -1,0 +1,27 @@
+$yamlContent = @"
+app_name: "dmgttmd"
+description: >-
+  Build the Ultimate DM Vault (dmgttmd) with a React frontend.
+  Include the Monster Squad module: a live encounter tracker that pulls stats from creatures.json (Appendix MM-A).
+  The tracker must manage multiple monster instances, track HP and AC, and allow clearing dead creatures.
+  Integrate Pocket Bard audio links: suggest 'Ominous Shadows' for undead and 'Wilderness Prep' for beasts.
+  Apply the Parchment and Void theme using globals.css and Spellbook.module.css.
+framework: "React"
+graph:
+  nodes:
+    - id: "CEO"
+      type: "ChatNode"
+      role: "CEO"
+    - id: "Programmer"
+      type: "ChatNode"
+      role: "Programmer"
+    - id: "Reviewer"
+      type: "ChatNode"
+      role: "Reviewer"
+  edges:
+    - source: "CEO"
+      target: "Programmer"
+    - source: "Programmer"
+      target: "Reviewer"
+"@
+

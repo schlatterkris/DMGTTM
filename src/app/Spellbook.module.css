@@ -1,0 +1,456 @@
+/* 1. The Container for the Orbit */
+.scryingContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 2rem 0;
+  perspective: 1000px; /* Gives a slight 3D depth */
+}
+
+/* 2. The Bronze Basin & Rippling Water */
+.scryingOrbit {
+  position: relative;
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, #1e3a8a 0%, #1e1b4b 100%);
+  border-radius: 50%;
+  border: 8px solid #8d6e63; /* Bronze/Wood rim */
+  box-shadow: 
+    inset 0 0 50px rgba(0, 0, 0, 0.8), /* Interior depth */
+    0 0 20px rgba(59, 130, 246, 0.5); /* Exterior magic glow */
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: all 0.5s ease-in-out;
+  animation: waterShift 10s infinite alternate linear;
+}
+
+/* 3. The Input Field (Transparent & Floating) */
+.scryingInput {
+  background: transparent;
+  border: none;
+  color: #e0f2fe;
+  font-family: 'Crimson Text', serif;
+  font-size: 1.4rem;
+  text-align: center;
+  width: 80%;
+  outline: none;
+  z-index: 10;
+  text-shadow: 0 0 8px rgba(255, 255, 255, 0.6);
+}
+
+.scryingInput::placeholder {
+  color: rgba(147, 197, 253, 0.4);
+  font-style: italic;
+}
+
+/* 4. Magical Ripple Keyframes */
+@keyframes waterShift {
+  0% {
+    filter: hue-rotate(0deg) contrast(1.1);
+    transform: scale(1) rotate(0deg);
+  }
+  50% {
+    box-shadow: 
+      inset 0 0 60px rgba(0, 0, 0, 0.9),
+      0 0 40px rgba(59, 130, 246, 0.7);
+  }
+  100% {
+    filter: hue-rotate(15deg) contrast(1.2);
+    transform: scale(1.02) rotate(2deg);
+  }
+}
+
+/* 5. Result List Parchment Overlay */
+.resultsList {
+  list-style: none;
+  padding: 0;
+  margin-top: -40px; /* Overlap the pool slightly */
+  width: 320px;
+  z-index: 20;
+  background: var(--parchment-base);
+  background-image: var(--paper-grain);
+  border: 1px solid var(--parchment-border);
+  box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+  border-radius: 4px;
+}
+
+.vaultWrapper {
+  background: #1a1a1a; /* The 'Table' the book sits on */
+  min-height: 100vh;
+  padding: 2rem;
+  display: flex;
+  justify-content: center;
+  font-family: 'EB Garamond', serif;
+}
+
+.parchmentPage {
+  background-color: var(--parchment-base);
+  background-image: var(--paper-grain);
+  color: var(--ink-primary);
+  padding: 3rem;
+  max-width: 800px;
+  width: 100%;
+  border: 1px solid var(--parchment-border);
+  position: relative;
+  
+  /* The 'Burnt Edge' Effect */
+  box-shadow: 
+    inset 0 0 50px rgba(139, 69, 19, 0.2),
+    0 10px 30px rgba(0, 0, 0, 0.5);
+    
+  /* The 'Irregular' Page Edge */
+  border-radius: 2px 4px 3px 4px / 4px 3px 5px 2px;
+}
+
+.parchmentPage::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  border: 2px solid rgba(0,0,0,0.05);
+  pointer-events: none;
+}
+
+/* Stat Block Styling */
+.statBlock {
+  border-top: 3px solid var(--danger-red);
+  border-bottom: 3px solid var(--danger-red);
+  margin: 1rem 0;
+  padding: 0.5rem 0;
+}
+
+.statGrid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 10px;
+  text-align: center;
+  color: var(--danger-red);
+  font-weight: bold;
+}
+/* The Keyframe Definition */
+@keyframes audioPulse {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(139, 69, 19, 0.7);
+    filter: brightness(1);
+  }
+  70% {
+    transform: scale(1.05);
+    box-shadow: 0 0 0 10px rgba(139, 69, 19, 0);
+    filter: brightness(1.3);
+  }
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(139, 69, 19, 0);
+    filter: brightness(1);
+  }
+}
+
+/* The Button Class */
+.audioVibeButton {
+  background: var(--ink-secondary);
+  color: var(--parchment-base);
+  border: none;
+  border-radius: 50%; /* Circular for a vinyl record feel */
+  width: 50px;
+  height: 50px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  font-size: 1.5rem;
+  border: 2px solid var(--parchment-border);
+}
+
+/* The Active State (Triggered by React) */
+.audioActive {
+  animation: audioPulse 2s infinite;
+  background: var(--danger-red); /* Changes color when active */
+  border-color: #ffd700; /* Gold highlight */
+}
+.vibeContainer {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  z-index: 1000; /* Ensure it stays above the "scroll" */
+}
+
+.vibeLabel {
+  font-family: 'Crimson Text', serif;
+  font-size: 0.8rem;
+  margin-top: 8px;
+  color: var(--ink-secondary);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.statBlockWrapper {
+  padding: 1rem;
+  border-left: 4px solid var(--parchment-border);
+  background: rgba(0, 0, 0, 0.03); /* Subtle contrast against the page */
+  margin: 1rem 0;
+}
+
+.entityTitle {
+  font-family: 'Cormorant SC', serif;
+  font-size: 2.2rem;
+  color: var(--danger-red);
+  margin-bottom: 0;
+  border-bottom: 2px solid var(--danger-red);
+}
+
+.sectionHeader {
+  font-family: 'Cormorant SC', serif;
+  font-size: 1.5rem;
+  border-bottom: 1px solid var(--ink-secondary);
+  color: var(--ink-primary);
+  margin-top: 1.5rem;
+}
+
+.abilityGrid {
+  display: flex;
+  justify-content: space-around;
+  margin: 1rem 0;
+  color: var(--danger-red);
+  font-weight: bold;
+}
+
+.abilityScore {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.statName { font-size: 0.8rem; }
+.statValue { font-size: 1.1rem; }
+
+/* The 'Action' styling inside formatText */
+
+.vibeContainer :global(.action-title) {
+  font-family: 'Uncial Antiqua', serif;
+  color: var(--color-gold-leaf);
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+}
+
+.vibeContainer :global(.stat-label) {
+  font-family: 'Uncial Antiqua', serif;
+  color: var(--color-dnd-red);
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.scryingOrbit:hover {
+  animation: waterShift 2s infinite alternate ease-in-out; /* Faster ripples on hover */
+  border-color: #b91c1c; /* Rim turns dark red, signaling focus */
+}
+.parchment-page {
+  transition: opacity 0.5s ease-in-out, transform 0.5s ease-out;
+}
+
+/* When a new entity is cast, we can briefly trigger a 'flash' or 'blur' */
+.castingEffect {
+  filter: blur(5px) sepia(1);
+  opacity: 0.5;
+}
+.lootBoxButton {
+  background: linear-gradient(145deg, #d4af37, #f9e27d); /* Gold Gradient */
+  border: 2px solid #8d6e63;
+  color: #2c2421;
+  padding: 10px 20px;
+  font-family: 'Cormorant SC', serif;
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+  transition: transform 0.2s;
+  margin-top: 20px;
+}
+
+.lootBoxButton:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.1);
+}
+
+/* The 'Chest Opening' Shaky Animation */
+@keyframes shake {
+  0% { transform: translate(1px, 1px) rotate(0deg); }
+  20% { transform: translate(-1px, -2px) rotate(-1deg); }
+  40% { transform: translate(-3px, 0px) rotate(1deg); }
+  60% { transform: translate(3px, 2px) rotate(0deg); }
+  80% { transform: translate(1px, -1px) rotate(1deg); }
+  100% { transform: translate(-1px, 2px) rotate(-1deg); }
+}
+
+.shaking {
+  animation: shake 0.5s infinite;
+  background: #f9e27d;
+}
+
+/* Loot Reveal Highlight */
+.lootFoundCard {
+  border: 2px solid #ffd700;
+  background: rgba(255, 215, 0, 0.05);
+  padding: 1rem;
+  margin-top: 1rem;
+  animation: fadeIn 1s ease-in;
+}
+.traitBox {
+  border: 1px solid var(--ink-secondary);
+  background: rgba(139, 69, 19, 0.05);
+  padding: 1rem;
+  margin: 1rem 0;
+  border-radius: 5px;
+  font-family: 'Indie Flower', cursive; /* Handwritten font vibe */
+  color: var(--ink-secondary);
+}
+
+.vibeHeader {
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  font-size: 0.8rem;
+  color: var(--danger-red);
+  margin-bottom: 0.5rem;
+}
+.tacticalBar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 120px;
+  background: #2c1e1a; /* Dark wood color */
+  border-top: 4px solid #d4af37; /* Brass trim */
+  display: flex;
+  gap: 15px;
+  padding: 10px 20px;
+  overflow-x: auto;
+  z-index: 2000;
+  box-shadow: 0 -5px 20px rgba(0,0,0,0.6);
+}
+
+.hudToken {
+  min-width: 180px;
+  background: var(--parchment-base);
+  border: 2px solid var(--parchment-border);
+  padding: 8px;
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.defeated {
+  filter: grayscale(1) sepia(0.5);
+  opacity: 0.7;
+}
+
+.hpBadge {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(0,0,0,0.1);
+  border-radius: 20px;
+  padding: 2px 8px;
+}
+.conditionBadge {
+  background: #7f1d1d; /* Wax Red */
+  color: #fff;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  font-size: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 4px;
+  box-shadow: 1px 1px 3px rgba(0,0,0,0.5);
+  border: 1px solid #450a0a;
+}
+
+.conditionPicker {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  max-height: 80px;
+  overflow-y: auto;
+  font-size: 0.7rem;
+  background: rgba(0,0,0,0.05);
+  padding: 5px;
+}
+
+.condActive {
+  background: var(--danger-red);
+  color: white;
+  border: none;
+}
+
+.condInactive {
+  background: transparent;
+  border: 1px solid var(--parchment-border);
+  color: var(--ink-secondary);
+}
+/* 1. The Floating Spell Scroll */
+.spectralScroll {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  width: 250px;
+  background: #f4e4bc; /* Parchment */
+  border: 2px solid #8d6e63;
+  padding: 10px;
+  z-index: 3000;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  font-family: 'Crimson Text', serif;
+  color: #2c2421;
+  animation: floatIn 0.2s ease-out;
+}
+
+@keyframes floatIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.spellLink {
+  color: #1e3a8a;
+  text-decoration: underline dotted;
+  cursor: help;
+  position: relative;
+}
+
+/* 2. The Soul Gems (Legendary Actions) */
+.gemContainer {
+  margin-top: 10px;
+  text-align: center;
+}
+
+.gemLabel {
+  font-size: 0.6rem;
+  color: var(--danger-red);
+  letter-spacing: 1px;
+}
+
+.gemRow {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+.soulGem {
+  width: 14px;
+  height: 20px;
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.glowing {
+  background: radial-gradient(circle, #ff00ff, #9333ea);
+  box-shadow: 0 0 10px #9333ea;
+}
+
+.dim {
+  background: #4b5563;
+  opacity: 0.3;
+}
