@@ -4,11 +4,19 @@ from dataclasses import dataclass, field, fields, replace
 from typing import Any, Dict, Mapping, Type, TypeVar, cast
 
 from entity.enum_options import enum_options_from_values
-from schema_registry import (
-    SchemaLookupError,
-    get_edge_condition_schema,
-    iter_edge_condition_schemas,
-)
+
+# Lazy imports to avoid circular imports
+def _get_schema_lookup_error():
+    from schema_registry import SchemaLookupError
+    return SchemaLookupError
+
+def _get_edge_condition_schema():
+    from schema_registry import get_edge_condition_schema
+    return get_edge_condition_schema
+
+def _iter_edge_condition_schemas():
+    from schema_registry import iter_edge_condition_schemas
+    return iter_edge_condition_schemas
 
 from entity.configs.base import (
     BaseConfig,
@@ -254,8 +262,8 @@ class EdgeConditionConfig(BaseConfig):
         config_path = extend_path(path, "config")
 
         try:
-            schema = get_edge_condition_schema(condition_type)
-        except SchemaLookupError as exc:
+            schema = _get_edge_condition_schema()(condition_type)
+        except _get_schema_lookup_error() as exc:
             raise ConfigError(f"unknown condition type '{condition_type}'", extend_path(path, "type")) from exc
         if config_payload is None:
             raise ConfigError("condition config is required", config_path)
@@ -266,7 +274,7 @@ class EdgeConditionConfig(BaseConfig):
     def child_routes(cls) -> Dict[ChildKey, Type[BaseConfig]]:
         return {
             ChildKey(field="config", value=name): schema.config_cls
-            for name, schema in iter_edge_condition_schemas().items()
+            for name, schema in _iter_edge_condition_schemas()().items()
         }
 
     @classmethod
@@ -274,7 +282,7 @@ class EdgeConditionConfig(BaseConfig):
         specs = super().field_specs()
         type_spec = specs.get("type")
         if type_spec:
-            registrations = iter_edge_condition_schemas()
+            registrations = _iter_edge_condition_schemas()()
             names = list(registrations.keys())
             descriptions = {name: schema.summary for name, schema in registrations.items()}
             specs["type"] = replace(

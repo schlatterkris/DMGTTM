@@ -4,11 +4,19 @@ from dataclasses import dataclass, replace
 from typing import Any, Dict, Mapping
 
 from entity.enum_options import enum_options_from_values
-from schema_registry import (
-    SchemaLookupError,
-    get_thinking_schema,
-    iter_thinking_schemas,
-)
+
+# Lazy imports to avoid circular imports
+def _get_schema_lookup_error():
+    from schema_registry import SchemaLookupError
+    return SchemaLookupError
+
+def _get_thinking_schema():
+    from schema_registry import get_thinking_schema
+    return get_thinking_schema
+
+def _iter_thinking_schemas():
+    from schema_registry import iter_thinking_schemas
+    return iter_thinking_schemas
 
 from entity.configs.base import BaseConfig, ConfigError, ConfigFieldSpec, ChildKey, extend_path, require_mapping, require_str
 
@@ -44,8 +52,8 @@ class ThinkingConfig(BaseConfig):
         mapping = require_mapping(data, path)
         thinking_type = require_str(mapping, "type", path)
         try:
-            schema = get_thinking_schema(thinking_type)
-        except SchemaLookupError as exc:
+            schema = _get_thinking_schema()(thinking_type)
+        except _get_schema_lookup_error() as exc:
             raise ConfigError(f"unsupported thinking type '{thinking_type}'", extend_path(path, "type")) from exc
 
         if "config" not in mapping or mapping["config"] is None:
@@ -75,7 +83,7 @@ class ThinkingConfig(BaseConfig):
     def child_routes(cls) -> dict[ChildKey, type[BaseConfig]]:
         return {
             ChildKey(field="config", value=name): schema.config_cls
-            for name, schema in iter_thinking_schemas().items()
+            for name, schema in _iter_thinking_schemas()().items()
         }
 
     @classmethod
@@ -83,7 +91,7 @@ class ThinkingConfig(BaseConfig):
         specs = super().field_specs()
         type_spec = specs.get("type")
         if type_spec:
-            registrations = iter_thinking_schemas()
+            registrations = _iter_thinking_schemas()()
             names = list(registrations.keys())
             descriptions = {name: schema.summary for name, schema in registrations.items()}
             specs["type"] = replace(

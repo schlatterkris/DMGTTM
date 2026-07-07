@@ -5,11 +5,19 @@ from typing import Any, Dict, List, Mapping
 
 from entity.enums import AgentExecFlowStage
 from entity.enum_options import enum_options_for, enum_options_from_values
-from schema_registry import (
-    SchemaLookupError,
-    get_memory_store_schema,
-    iter_memory_store_schemas,
-)
+
+# Lazy imports to avoid circular imports
+def _get_schema_lookup_error():
+    from schema_registry import SchemaLookupError
+    return SchemaLookupError
+
+def _get_memory_store_schema():
+    from schema_registry import get_memory_store_schema
+    return get_memory_store_schema
+
+def _iter_memory_store_schemas():
+    from schema_registry import iter_memory_store_schemas
+    return iter_memory_store_schemas
 
 from entity.configs.base import (
     BaseConfig,
@@ -291,8 +299,8 @@ class MemoryStoreConfig(BaseConfig):
         name = require_str(mapping, "name", path)
         store_type = require_str(mapping, "type", path)
         try:
-            schema = get_memory_store_schema(store_type)
-        except SchemaLookupError as exc:
+            schema = _get_memory_store_schema()(store_type)
+        except _get_schema_lookup_error() as exc:
             raise ConfigError(f"unsupported memory store type '{store_type}'", extend_path(path, "type")) from exc
 
         if "config" not in mapping or mapping["config"] is None:
@@ -334,7 +342,7 @@ class MemoryStoreConfig(BaseConfig):
     def child_routes(cls) -> Dict[ChildKey, type[BaseConfig]]:
         return {
             ChildKey(field="config", value=name): schema.config_cls
-            for name, schema in iter_memory_store_schemas().items()
+            for name, schema in _iter_memory_store_schemas()().items()
         }
 
     @classmethod
@@ -342,7 +350,7 @@ class MemoryStoreConfig(BaseConfig):
         specs = super().field_specs()
         type_spec = specs.get("type")
         if type_spec:
-            registrations = iter_memory_store_schemas()
+            registrations = _iter_memory_store_schemas()()
             names = list(registrations.keys())
             descriptions = {name: schema.summary for name, schema in registrations.items()}
             specs["type"] = replace(

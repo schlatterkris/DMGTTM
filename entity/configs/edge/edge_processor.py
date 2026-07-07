@@ -6,11 +6,20 @@ from typing import Any, Dict, Mapping, Type, TypeVar, cast
 from entity.enum_options import enum_options_from_values
 from utils.function_catalog import get_function_catalog
 from utils.function_manager import EDGE_PROCESSOR_FUNCTION_DIR
-from schema_registry import (
-    SchemaLookupError,
-    get_edge_processor_schema,
-    iter_edge_processor_schemas,
-)
+
+# Lazy imports to avoid circular imports
+def _get_schema_lookup_error():
+    from schema_registry import SchemaLookupError
+    return SchemaLookupError
+
+def _get_edge_processor_schema():
+    from schema_registry import get_edge_processor_schema
+    return get_edge_processor_schema
+
+def _iter_edge_processor_schemas():
+    from schema_registry import iter_edge_processor_schemas
+    return iter_edge_processor_schemas
+
 from entity.configs.base import (
     BaseConfig,
     ChildKey,
@@ -290,8 +299,8 @@ class EdgeProcessorConfig(BaseConfig):
         if config_payload is None:
             raise ConfigError("processor config is required", extend_path(path, "config"))
         try:
-            schema = get_edge_processor_schema(processor_type)
-        except SchemaLookupError as exc:
+            schema = _get_edge_processor_schema()(processor_type)
+        except _get_schema_lookup_error() as exc:
             raise ConfigError(f"unknown processor type '{processor_type}'", extend_path(path, "type")) from exc
         processor_config = schema.config_cls.from_dict(config_payload, path=extend_path(path, "config"))
         return cls(type=processor_type, config=processor_config, path=path)
@@ -300,7 +309,7 @@ class EdgeProcessorConfig(BaseConfig):
     def child_routes(cls) -> Dict[ChildKey, Type[BaseConfig]]:
         return {
             ChildKey(field="config", value=name): schema.config_cls
-            for name, schema in iter_edge_processor_schemas().items()
+            for name, schema in _iter_edge_processor_schemas()().items()
         }
 
     @classmethod
@@ -308,7 +317,7 @@ class EdgeProcessorConfig(BaseConfig):
         specs = super().field_specs()
         type_spec = specs.get("type")
         if type_spec:
-            registrations = iter_edge_processor_schemas()
+            registrations = _iter_edge_processor_schemas()()
             names = list(registrations.keys())
             descriptions = {name: schema.summary for name, schema in registrations.items()}
             specs["type"] = replace(

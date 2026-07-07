@@ -1,0 +1,25 @@
+// frontend/src/components/VaultCard.js
+import styles from './Spellbook.module.css';
+
+export const VaultCard = ({ data, type }) => {
+  const audioVibe = data.audio_vibe || "Ambient Dungeon";
+  
+  return (
+    <div className={styles.spectralScroll}>
+      <h2 className="font-medieval text-gold-leaf text-xl border-b border-gold-leaf/30">
+        {data.name || "Unknown Entity"}
+      </h2>
+      <div className="p-2 text-ink text-sm">
+        <p className="italic mb-2">{data.content?.[0] || "No description available."}</p>
+        
+        {/* The Pocket Bard Integration */}
+        <div className="mt-4 flex items-center gap-2 border-t border-ink/10 pt-2">
+          <span className="text-xs uppercase tracking-widest text-dnd-red font-bold">Vibe:</span>
+          <a href={`https://pocketbard.app/${audioVibe}`} className={styles.spellLink}>
+            {audioVibe}
+          </a>
+        </div>
+      </div>
+    </div>
+  );
+};

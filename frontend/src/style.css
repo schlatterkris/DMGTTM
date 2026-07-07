@@ -1,0 +1,45 @@
+/* Global styles - DMGTTM */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  width: 100%;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  line-height: 1.5;
+  color: #f2f2f2;
+  background-color: #0a0a0a;
+  -webkit-font-smoothing: antialiased;
+}
+
+#app {
+  height: 100%;
+  width: 100%;
+}
+
+a {
+  color: #a0c4ff;
+  text-decoration: none;
+}
+a:hover {
+  color: #99eaf9;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #0a0a0a;
+}
+::-webkit-scrollbar-thumb {
+  background: #333;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}

@@ -9,8 +9,12 @@ except ImportError:  # pragma: no cover
     _BASE_EXCEPTION_GROUP_TYPE = None  # type: ignore[assignment]
 
 from entity.enums import AgentInputMode
-from schema_registry import iter_model_provider_schemas
 from utils.strs import titleize
+
+# Lazy import to avoid circular imports
+def _iter_model_provider_schemas():
+    from schema_registry import iter_model_provider_schemas
+    return iter_model_provider_schemas
 
 from entity.configs.base import (
     BaseConfig,
@@ -565,7 +569,7 @@ class AgentConfig(BaseConfig):
 
     @staticmethod
     def _provider_registry_snapshot() -> tuple[List[str], Dict[str, Dict[str, Any]]]:
-        specs = iter_model_provider_schemas()
+        specs = _iter_model_provider_schemas()()
         names = list(specs.keys())
         metadata: Dict[str, Dict[str, Any]] = {}
         for name, spec in specs.items():

@@ -1,0 +1,24 @@
+# The Ultimate DM Vault - Google AI Powered
+project_name: "DMGTTM"
+version: "1.0.0"
+vibe: "Gritty Parchment"
+
+graph:
+  nodes:
+    - id: "dm_vault_core"
+      type: "agent"
+      config:
+        name: "The Vault Keeper"
+        role: "Lead Architect"
+        # GOOGLE AI SHIFT
+        provider: "google" 
+        model: "gemini-1.5-flash"
+        prompt: "You are the Lead Architect of the Ultimate DM Vault. Use your cosmic knowledge to manage Monsters, Gods, and Planes."
+  edges: []
+
+# Your Vault Data Connections
+vars:
+  monster_manual: "monsters.json"
+  gods_file: "gods.json"
+  planes_file: "planes.json"
+  npc_list: "npcs.json"

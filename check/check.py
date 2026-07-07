@@ -1,9 +1,8 @@
 """Utilities for loading, validating design_0.4.0 workflows."""
-
+import os
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-from runtime.bootstrap.schema import ensure_schema_registry_populated
 from check.check_yaml import validate_design
 from check.check_workflow import check_workflow_structure
 from entity.config_loader import prepare_design_mapping
@@ -11,21 +10,22 @@ from entity.configs import DesignConfig, ConfigError
 from schema_registry import iter_node_schemas
 from utils.io_utils import read_yaml
 
+# Lazy import to avoid circular imports
+def _ensure_schema():
+    from runtime.bootstrap.schema import ensure_schema_registry_populated
+    ensure_schema_registry_populated()
 
-ensure_schema_registry_populated()
-
+# Call lazy init when needed (first config load will trigger it)
+_ensure_schema()
 
 class DesignError(RuntimeError):
     """Raised when a workflow design cannot be loaded or validated."""
-
-
 
 def _allowed_node_types() -> set[str]:
     names = set(iter_node_schemas().keys())
     if not names:
         raise DesignError("No node types registered; cannot validate workflow")
     return names
-
 
 def _ensure_supported(graph: Dict[str, Any]) -> None:
     """Ensure the MVP constraints are satisfied for the provided graph."""
@@ -47,15 +47,26 @@ def _ensure_supported(graph: Dict[str, Any]) -> None:
                         f"'{legacy_key}' is deprecated. Use the new graph-level memory stores for node '{nid}'."
                     )
 
-
 def load_config(
-    config_path: Path,
-    *,
-    fn_module: Optional[str] = None,
-    set_defaults: bool = True,
-    vars_override: Optional[Dict[str, Any]] = None,
+    config_path: str, 
+    fn_module: Optional[str] = None, 
+    vars_override: Optional[Dict] = None, 
+    set_defaults: bool = True
 ) -> DesignConfig:
     """Load, validate, and sanity-check a workflow file."""
+    
+    # VIBE FIX: Path Redirection Logic
+    current_path = Path(config_path)
+    if not current_path.exists():
+        # Look relative to the root of THIS project
+        base_dir = Path(__file__).parent.parent 
+        local_config = base_dir / "design.yaml"
+        
+        if local_config.exists():
+            print(f"✨ Redirecting: Found design.yaml at {local_config}")
+            config_path = str(local_config)
+        else:
+            raise DesignError(f"Design file not found at {config_path} or {local_config}")
 
     try:
         raw_data = read_yaml(config_path)
@@ -65,6 +76,7 @@ def load_config(
     if not isinstance(raw_data, dict):
         raise DesignError("YAML root must be a mapping")
 
+    # Handle variable overrides
     if vars_override:
         merged_vars = dict(raw_data.get("vars") or {})
         merged_vars.update(vars_override)
@@ -88,20 +100,17 @@ def load_config(
         formatted = "\n".join(f"- {err}" for err in logic_errors)
         raise DesignError(f"Workflow logical issues detected for '{config_path}':\n{formatted}")
     else:
-        print("Workflow OK.")
+        print("✅ Workflow structure validated.")
 
     graph = data.get("graph") or {}
     _ensure_supported(graph)
 
     return design
 
-
 def check_config(yaml_content: Any) -> str:
     if not isinstance(yaml_content, dict):
         return "YAML root must be a mapping"
 
-    # Skip placeholder resolution during save - users may configure env vars at runtime
-    # Use yaml_content directly instead of prepare_design_mapping()
     schema_errors = validate_design(yaml_content)
     if schema_errors:
         formatted = "\n".join(f"- {err}" for err in schema_errors)

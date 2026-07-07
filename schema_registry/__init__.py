@@ -1,33 +1,69 @@
 """Public helpers for entity schema registries."""
 
-from .registry import (
-    SchemaLookupError,
-    SchemaRegistrationError,
-    NodeSchemaSpec,
-    EdgeConditionSchemaSpec,
-    EdgeProcessorSchemaSpec,
-    MemoryStoreSchemaSpec,
-    ThinkingSchemaSpec,
-    ModelProviderSchemaSpec,
-    register_node_schema,
-    register_edge_condition_schema,
-    register_edge_processor_schema,
-    register_memory_store_schema,
-    register_thinking_schema,
-    register_model_provider_schema,
-    iter_node_schemas,
-    iter_edge_condition_schemas,
-    iter_edge_processor_schemas,
-    iter_memory_store_schemas,
-    iter_thinking_schemas,
-    iter_model_provider_schemas,
-    get_node_schema,
-    get_edge_condition_schema,
-    get_edge_processor_schema,
-    get_memory_store_schema,
-    get_thinking_schema,
-    get_model_provider_schema,
-)
+# Lazy imports to avoid circular imports
+def __getattr__(name):
+    # Import from registry only when attribute is accessed
+    from .registry import (
+        SchemaLookupError,
+        SchemaRegistrationError,
+        NodeSchemaSpec,
+        EdgeConditionSchemaSpec,
+        EdgeProcessorSchemaSpec,
+        MemoryStoreSchemaSpec,
+        ThinkingSchemaSpec,
+        ModelProviderSchemaSpec,
+        register_node_schema,
+        register_edge_condition_schema,
+        register_edge_processor_schema,
+        register_memory_store_schema,
+        register_thinking_schema,
+        register_model_provider_schema,
+        iter_node_schemas,
+        iter_edge_condition_schemas,
+        iter_edge_processor_schemas,
+        iter_memory_store_schemas,
+        iter_thinking_schemas,
+        iter_model_provider_schemas,
+        get_node_schema,
+        get_edge_condition_schema,
+        get_edge_processor_schema,
+        get_memory_store_schema,
+        get_thinking_schema,
+        get_model_provider_schema,
+    )
+    
+    mapping = {
+        "SchemaLookupError": SchemaLookupError,
+        "SchemaRegistrationError": SchemaRegistrationError,
+        "NodeSchemaSpec": NodeSchemaSpec,
+        "EdgeConditionSchemaSpec": EdgeConditionSchemaSpec,
+        "EdgeProcessorSchemaSpec": EdgeProcessorSchemaSpec,
+        "MemoryStoreSchemaSpec": MemoryStoreSchemaSpec,
+        "ThinkingSchemaSpec": ThinkingSchemaSpec,
+        "ModelProviderSchemaSpec": ModelProviderSchemaSpec,
+        "register_node_schema": register_node_schema,
+        "register_edge_condition_schema": register_edge_condition_schema,
+        "register_edge_processor_schema": register_edge_processor_schema,
+        "register_memory_store_schema": register_memory_store_schema,
+        "register_thinking_schema": register_thinking_schema,
+        "register_model_provider_schema": register_model_provider_schema,
+        "iter_node_schemas": iter_node_schemas,
+        "iter_edge_condition_schemas": iter_edge_condition_schemas,
+        "iter_edge_processor_schemas": iter_edge_processor_schemas,
+        "iter_memory_store_schemas": iter_memory_store_schemas,
+        "iter_thinking_schemas": iter_thinking_schemas,
+        "iter_model_provider_schemas": iter_model_provider_schemas,
+        "get_node_schema": get_node_schema,
+        "get_edge_condition_schema": get_edge_condition_schema,
+        "get_edge_processor_schema": get_edge_processor_schema,
+        "get_memory_store_schema": get_memory_store_schema,
+        "get_thinking_schema": get_thinking_schema,
+        "get_model_provider_schema": get_model_provider_schema,
+    }
+    
+    if name in mapping:
+        return mapping[name]
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 __all__ = [
     "SchemaLookupError",

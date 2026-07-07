@@ -2,7 +2,11 @@
 
 from dataclasses import dataclass, field
 from typing import Any, Dict, Mapping, MutableMapping, Type
-from entity.configs.base import BaseConfig
+
+# Lazy import to avoid circular imports
+def _get_base_config():
+    from entity.configs.base import BaseConfig
+    return BaseConfig
 
 
 class SchemaLookupError(RuntimeError):

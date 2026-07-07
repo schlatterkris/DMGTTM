@@ -1,7 +1,7 @@
 ﻿"""Graph orchestration adapted to ChatDev design_0.4.0 workflows."""
 
 import threading
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from runtime.node.agent.memory import MemoryBase, MemoryFactory, MemoryManager
 from runtime.node.agent.thinking import ThinkingManagerBase, ThinkingManagerFactory
@@ -40,10 +40,11 @@ from runtime.edge.processors import (
     build_edge_processor as build_edge_payload_processor,
 )
 from workflow.executor.dynamic_edge_executor import DynamicEdgeExecutor
+from workflow.dynamic_edge_utils import get_dynamic_config_for_node, separate_dynamic_inputs
 
 
 # ------------------------------------------------------------------
-#  Executor class (includes all Memory and Thinking logic)
+#  Exceptions
 # ------------------------------------------------------------------
 
 class ExecutionError(RuntimeError):
@@ -444,61 +445,11 @@ class GraphExecutor:
     def _get_dynamic_config_for_node(self, node: Node):
         """Get the dynamic configuration for a node from its incoming edges.
         
-        If multiple incoming edges have dynamic config, they must be identical
-        (same type and parameters). Otherwise raises an error.
-        
+        Uses the dynamic_edge_utils module for cleaner code.
         Returns the dynamic config if found, or None.
         """
-        from entity.configs.edge.dynamic_edge_config import DynamicEdgeConfig
-        
-        found_configs = []  # List of (source_node_id, dynamic_config)
-        
-        for predecessor in node.predecessors:
-            for edge_link in predecessor.iter_outgoing_edges():
-                if edge_link.target is node and edge_link.dynamic_config is not None:
-                    found_configs.append((predecessor.id, edge_link.dynamic_config))
-        
-        if not found_configs:
-            return None
-        
-        if len(found_configs) == 1:
-            return found_configs[0][1]
-        
-        # Multiple dynamic configs found - verify they are consistent
-        first_source, first_config = found_configs[0]
-        for source_id, config in found_configs[1:]:
-            # Check type consistency
-            if config.type != first_config.type:
-                raise WorkflowExecutionError(
-                    f"Node '{node.id}' has inconsistent dynamic configurations on incoming edges: "
-                    f"edge from '{first_source}' has type '{first_config.type}', "
-                    f"but edge from '{source_id}' has type '{config.type}'. "
-                    f"All dynamic edges to the same node must use the same configuration."
-                )
-            # Check split config consistency
-            if (config.split.type != first_config.split.type or
-                config.split.pattern != first_config.split.pattern or
-                config.split.json_path != first_config.split.json_path):
-                raise WorkflowExecutionError(
-                    f"Node '{node.id}' has inconsistent split configurations on incoming edges: "
-                    f"edges from '{first_source}' and '{source_id}' have different split settings. "
-                    f"All dynamic edges to the same node must use the same configuration."
-                )
-            # Check mode-specific config consistency
-            if config.max_parallel != first_config.max_parallel:
-                raise WorkflowExecutionError(
-                    f"Node '{node.id}' has inconsistent max_parallel on incoming edges: "
-                    f"edge from '{first_source}' has max_parallel={first_config.max_parallel}, "
-                    f"but edge from '{source_id}' has max_parallel={config.max_parallel}."
-                )
-            if config.type == "tree" and config.group_size != first_config.group_size:
-                raise WorkflowExecutionError(
-                    f"Node '{node.id}' has inconsistent group_size on incoming edges: "
-                    f"edge from '{first_source}' has group_size={first_config.group_size}, "
-                    f"but edge from '{source_id}' has group_size={config.group_size}."
-                )
-        
-        return first_config
+        found, config = get_dynamic_config_for_node(node)
+        return config if found else None
 
     def _execute_with_dynamic_config(
         self,
@@ -516,16 +467,8 @@ class GraphExecutor:
         Returns:
             Output messages from dynamic execution
         """
-        # Separate inputs: dynamic edge inputs vs static (non-dynamic) edge inputs
-        # Dynamic edge inputs will be split, static inputs will be replicated to all units
-        dynamic_inputs: List[Message] = []
-        static_inputs: List[Message] = []
-        
-        for msg in inputs:
-            if msg.metadata.get("_from_dynamic_edge"):
-                dynamic_inputs.append(msg)
-            else:
-                static_inputs.append(msg)
+        # Separate inputs using utility function
+        dynamic_inputs, static_inputs = separate_dynamic_inputs(inputs)
         
         self.log_manager.info(
             f"Executing node {node.id} with edge dynamic config ({dynamic_config.type} mode): "
