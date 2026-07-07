@@ -335,6 +335,9 @@ def add_member(warband_id: int, payload: WarbandMemberCreate):
         current_hp = max_hp
     creature_json = json.dumps(payload.creature_data)
     with _warband_conn() as conn:
+        wb = conn.execute("SELECT id FROM warbands WHERE id = ?", (warband_id,)).fetchone()
+        if not wb:
+            raise HTTPException(status_code=404, detail="Warband not found")
         cur = conn.execute(
             "INSERT INTO warband_members (warband_id, name, creature_data, max_hp, current_hp) VALUES (?, ?, ?, ?, ?)",
             (warband_id, payload.name, creature_json, max_hp, current_hp)
@@ -355,9 +358,11 @@ def update_member(warband_id: int, member_id: int, payload: WarbandMemberUpdate)
         return {"ok": True}
     values.extend([warband_id, member_id])
     with _warband_conn() as conn:
-        conn.execute(f"UPDATE warband_members SET {', '.join(fields)} WHERE warband_id = ? AND id = ?", values)
+        cur = conn.execute(f"UPDATE warband_members SET {', '.join(fields)} WHERE warband_id = ? AND id = ?", values)
         conn.execute("UPDATE warbands SET updated_at = CURRENT_TIMESTAMP WHERE id = ?", (warband_id,))
         conn.commit()
+        if cur.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Member not found")
         return {"ok": True}
 
 
