@@ -58,15 +58,15 @@ graph:
         - Do not include trigger in the output to avoid affecting upstream condition judgment.
         - Do not provide a final answer.
       tooling:
-        type: function
-        config:
-          auto_load: true
-          tools:
-          - name: web_search
-          - name: get_webpage_content
-          - name: execute_code
-          - name: get_city_num
-          - name: get_weather
+        - type: function
+          config:
+            auto_load: true
+            tools:
+            - name: web_search
+            - name: read_webpage_content
+            - name: execute_code
+            - name: get_city_num
+            - name: get_weather
       params:
         temperature: 0.1
         max_tokens: 1200
