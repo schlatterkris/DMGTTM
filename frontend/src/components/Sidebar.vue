@@ -2,10 +2,16 @@
   <div class="sidebar">
     <nav class="sidebar-nav">
       <router-link to="/">Home</router-link>
+      <span class="nav-label">DM Tools</span>
       <router-link to="/warbands">Warbands</router-link>
       <router-link to="/bestiary">Bestiary</router-link>
       <router-link to="/spells">Spells</router-link>
       <router-link to="/magic-items">Magic Items</router-link>
+      <span class="nav-label">Workflows</span>
+      <router-link to="/workflows">Workflows</router-link>
+      <router-link to="/launch">Launch</router-link>
+      <router-link to="/batch">Batch</router-link>
+      <router-link to="/tutorial">Tutorial</router-link>
     </nav>
   </div>
 </template>
@@ -52,6 +58,17 @@ import { RouterLink } from 'vue-router'
 }
 
 .sidebar-nav a.router-link-active,
+.nav-label {
+  color: #555;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  padding: 16px 4px 4px;
+  font-family: 'Inter', sans-serif;
+  user-select: none;
+}
+
 .sidebar-nav a.router-link-exact-active {
   background: linear-gradient(90deg, #aaffcd, #99eaf9, #a0c4ff);
   background-clip: text;
