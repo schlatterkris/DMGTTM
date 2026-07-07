@@ -42,8 +42,9 @@ def _flatten_entries(data: Any, path: str = "") -> List[Dict[str, Any]]:
                     else:
                         entry["text"] = str(content)
                     results.append(entry)
-                else:
-                    results.extend(_flatten_entries(value, current_path))
+                sub = {k: v for k, v in value.items() if k != "content"}
+                if sub:
+                    results.extend(_flatten_entries(sub, current_path))
             elif isinstance(value, list):
                 entry = {"name": key, "path": current_path, "text": json.dumps(value)}
                 _extract_stats_from_content(entry, value)

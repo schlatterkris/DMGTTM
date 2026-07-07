@@ -23,6 +23,7 @@ dependencies = [
     "wsproto",
     "pydantic==2.12.5",
     "requests",
+    "httpx",
     "pytest",
     "beautifulsoup4",
     "networkx",
