@@ -418,7 +418,7 @@ def _parse_encounter_sections(
     """
     full_lines: List[str] = []
     for page_num, page_text in pages:
-        full_lines.append(f"[Page {page_num}]")
+        full_lines.append(f"[Page {page_num:03d}]")
         for line in page_text.split("\n"):
             full_lines.append(line)
 
@@ -457,7 +457,7 @@ def _parse_encounter_sections(
             creatures = _find_creatures_in_text(page_text, names)
             if creatures:
                 sections.append({
-                    "name": f"Page {page_num}",
+                    "name": f"Page {page_num:03d}",
                     "page": page_num,
                     "text": page_text,
                     "creatures": creatures,
@@ -648,7 +648,7 @@ def upload_pdf(file: UploadFile = File(...)):
 
     with _warband_conn() as conn:
         for section in sections:
-            warband_name = f"[{adventure_name} & p.{section['page']}] {section['name']}"
+            warband_name = f"[{adventure_name} & p.{section['page']:03d}] {section['name']}"
 
             cur = conn.execute("INSERT INTO warbands (name) VALUES (?)", (warband_name,))
             warband_id = cur.lastrowid
