@@ -7,11 +7,7 @@
       <router-link to="/bestiary">Bestiary</router-link>
       <router-link to="/spells">Spells</router-link>
       <router-link to="/magic-items">Magic Items</router-link>
-      <span class="nav-label">Workflows</span>
-      <router-link to="/workflows">Workflows</router-link>
-      <router-link to="/launch">Launch</router-link>
-      <router-link to="/batch">Batch</router-link>
-      <router-link to="/tutorial">Tutorial</router-link>
+
     </nav>
   </div>
 </template>

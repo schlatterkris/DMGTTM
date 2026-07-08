@@ -26,24 +26,8 @@ const routes = [
         component: () => import('../pages/MagicItemsView.vue')
     },
     {
-        path: '/workflows',
-        component: () => import('../pages/WorkflowWorkbench.vue')
-    },
-    {
-        path: '/workflows/:name',
-        component: () => import('../pages/WorkflowWorkbench.vue')
-    },
-    {
-        path: '/batch',
-        component: () => import('../pages/BatchRunView.vue')
-    },
-    {
-        path: '/launch',
-        component: () => import('../pages/LaunchView.vue')
-    },
-    {
-        path: '/tutorial',
-        component: () => import('../pages/TutorialView.vue')
+        path: '/:pathMatch(.*)*',
+        redirect: '/'
     }
 ]
 

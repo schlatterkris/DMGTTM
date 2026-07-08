@@ -8,13 +8,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 # ── Environment isolation ──────────────────────────────────────────────
-# These must be set BEFORE importing server.app (which loads .env at
-# import time via load_dotenv_file / os.environ.setdefault).
-os.environ.setdefault("SERVER_LOG_FILE", "")
 os.environ.setdefault("LOG_LEVEL", "CRITICAL")
-os.environ.setdefault("OPENAI_API_KEY", "test-openai-key")
-os.environ.setdefault("GEMINI_API_KEY", "test-gemini-key")
-os.environ.setdefault("OPENAI_BASE_URL", "http://test.local/v1")
 
 
 @pytest.fixture(scope="session")

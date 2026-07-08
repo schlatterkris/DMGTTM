@@ -4,5 +4,5 @@ from utils.env_loader import load_dotenv_file
 
 load_dotenv_file()
 
-app = FastAPI(title="DevAll Workflow Server", version="1.0.0")
+app = FastAPI(title="DMGTTM - Dungeon Master Guide to the Multiverse", version="1.0.0")
 init_app(app)
