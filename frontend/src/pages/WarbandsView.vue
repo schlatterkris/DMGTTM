@@ -11,11 +11,34 @@ const uploading = ref(false)
 const uploadResult = ref(null)
 const uploadError = ref('')
 
+const searchQuery = ref('')
+const sortBy = ref('updated_at')
+const sortOrder = ref('desc')
+
 const API = '/api/dm'
+
+function sortIcon(field) {
+    if (sortBy.value !== field) return '\u2195'
+    return sortOrder.value === 'asc' ? '\u25B2' : '\u25BC'
+}
+
+function toggleSort(field) {
+    if (sortBy.value === field) {
+        sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc'
+    } else {
+        sortBy.value = field
+        sortOrder.value = 'asc'
+    }
+    load()
+}
 
 async function load() {
     loading.value = true
-    const res = await fetch(`${API}/warbands`)
+    const params = new URLSearchParams()
+    if (searchQuery.value.trim()) params.set('q', searchQuery.value.trim())
+    params.set('sort_by', sortBy.value)
+    params.set('sort_order', sortOrder.value)
+    const res = await fetch(`${API}/warbands?${params}`)
     const data = await res.json()
     warbands.value = data.warbands
     loading.value = false
@@ -89,7 +112,7 @@ onMounted(load)
 
     <div class="pdf-section">
       <div class="pdf-header">Upload PDF</div>
-      <p class="pdf-desc">Upload an adventure PDF to auto-detect creatures and build a warband.</p>
+      <p class="pdf-desc">Upload an adventure PDF to auto-detect encounters and build a warband per encounter.</p>
       <div class="pdf-controls">
         <input type="file" accept=".pdf" @change="onFileSelected" class="file-input" />
         <button class="btn-pdf" :disabled="!pdfFile || uploading" @click="uploadPdf">
@@ -102,22 +125,32 @@ onMounted(load)
       <div v-if="uploadResult" class="pdf-result">
         <div class="result-header">
           <span class="result-icon">&#10003;</span>
-          Warband <strong>{{ uploadResult.warband_name }}</strong> created
-          ({{ uploadResult.members_added }} members)
+          <strong>{{ uploadResult.warbands.length }}</strong> warband{{ uploadResult.warbands.length !== 1 ? 's' : '' }} created
         </div>
-        <div class="result-creatures">
-          <div v-for="c in uploadResult.creatures" :key="c.name" class="result-creature"
-               :class="{ matched: c.matched, unmatched: !c.matched }">
-            <span class="creature-icon">{{ c.matched ? '&#10003;' : '&#10007;' }}</span>
-            <span class="creature-name">{{ c.name }}</span>
-            <span class="creature-count">&times;{{ c.count }}</span>
-            <span v-if="!c.matched" class="creature-note">not in database</span>
+        <div v-for="wb in uploadResult.warbands" :key="wb.warband_id" class="wb-result">
+          <div class="wb-result-header">
+            Warband <strong>{{ wb.warband_name }}</strong>
+            ({{ wb.members_added }} member{{ wb.members_added !== 1 ? 's' : '' }})
           </div>
+          <div class="result-creatures">
+            <div v-for="c in wb.creatures" :key="c.name" class="result-creature"
+                 :class="{ matched: c.matched, unmatched: !c.matched }">
+              <span class="creature-icon">{{ c.matched ? '&#10003;' : '&#10007;' }}</span>
+              <span class="creature-name">{{ c.name }}</span>
+              <span class="creature-count">&times;{{ c.count }}</span>
+              <span v-if="!c.matched" class="creature-note">not in database</span>
+            </div>
+          </div>
+          <button class="btn-sm btn-accent" @click="open(wb.warband_id)">
+            View &rarr;
+          </button>
         </div>
-        <button class="btn-accent" @click="open(uploadResult.warband_id)">
-          View Warband &rarr;
-        </button>
       </div>
+    </div>
+
+    <div class="toolbar">
+      <input v-model="searchQuery" placeholder="Search warbands..." class="search-input"
+             @input="load" />
     </div>
 
     <div v-if="loading" class="status">Loading...</div>
@@ -127,9 +160,15 @@ onMounted(load)
     <table v-else class="data-table">
       <thead>
         <tr>
-          <th>Name</th>
-          <th>Created</th>
-          <th>Updated</th>
+          <th class="sortable" @click="toggleSort('name')">
+            Name <span class="sort-icon">{{ sortIcon('name') }}</span>
+          </th>
+          <th class="sortable" @click="toggleSort('created_at')">
+            Created <span class="sort-icon">{{ sortIcon('created_at') }}</span>
+          </th>
+          <th class="sortable" @click="toggleSort('updated_at')">
+            Updated <span class="sort-icon">{{ sortIcon('updated_at') }}</span>
+          </th>
           <th>Actions</th>
         </tr>
       </thead>
@@ -193,6 +232,26 @@ h1 {
   font-weight: 700;
   cursor: pointer;
 }
+.toolbar {
+  margin-bottom: 12px;
+}
+.search-input {
+  width: 100%;
+  padding: 10px 16px;
+  border-radius: 8px;
+  border: 1px solid #444;
+  background: #2a2a2a;
+  color: #f2f2f2;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+.search-input:focus {
+  outline: none;
+  border-color: #ffa36b;
+}
+.search-input::placeholder {
+  color: #666;
+}
 .data-table {
   width: 100%;
   border-collapse: collapse;
@@ -211,6 +270,17 @@ h1 {
   font-size: 13px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  user-select: none;
+}
+.sortable {
+  cursor: pointer;
+}
+.sortable:hover {
+  color: #f2f2f2;
+}
+.sort-icon {
+  font-size: 11px;
+  margin-left: 4px;
 }
 .clickable:hover {
   background: #2a2a2a;
@@ -222,6 +292,11 @@ h1 {
   border: none;
   font-size: 13px;
   cursor: pointer;
+}
+.wb-result .btn-accent {
+  padding: 6px 16px;
+  font-size: 13px;
+  margin-top: 8px;
 }
 .btn-danger {
   background: #ff6b6b22;
@@ -325,6 +400,19 @@ h1 {
   flex-direction: column;
   gap: 6px;
   margin-bottom: 12px;
+}
+.wb-result {
+  margin-top: 12px;
+  padding: 12px;
+  background: #252525;
+  border-radius: 8px;
+  border-left: 3px solid #ffa36b;
+}
+.wb-result-header {
+  font-size: 14px;
+  color: #ffa36b;
+  font-weight: 700;
+  margin-bottom: 8px;
 }
 .result-creature {
   display: flex;

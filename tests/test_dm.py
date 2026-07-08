@@ -261,14 +261,14 @@ class TestWarbands:
 
         update = client.patch(
             f"/api/dm/warbands/{wb['id']}/members/{member['id']}",
-            json={"current_hp": 8, "initiative": 12},
+            json={"current_hp": 8, "initiative": 125},
         )
         assert update.status_code == 200
 
         get = client.get(f"/api/dm/warbands/{wb['id']}")
         m = get.json()["members"][0]
         assert m["current_hp"] == 8
-        assert m["initiative"] == 12
+        assert m["initiative"] == 125
 
     def test_update_member_partial(self, client, warband_db_override):
         wb = client.post("/api/dm/warbands", json={"name": "Warband"}).json()
@@ -286,6 +286,39 @@ class TestWarbands:
         get = client.get(f"/api/dm/warbands/{wb['id']}")
         m = get.json()["members"][0]
         assert m["current_hp"] == 5
+
+    def test_update_initiative_decimal(self, client, warband_db_override):
+        wb = client.post("/api/dm/warbands", json={"name": "Warband"}).json()
+        m1 = client.post(
+            f"/api/dm/warbands/{wb['id']}/members",
+            json={"name": "Alpha", "creature_data": {}},
+        ).json()
+        m2 = client.post(
+            f"/api/dm/warbands/{wb['id']}/members",
+            json={"name": "Beta", "creature_data": {}},
+        ).json()
+        m3 = client.post(
+            f"/api/dm/warbands/{wb['id']}/members",
+            json={"name": "Gamma", "creature_data": {}},
+        ).json()
+
+        client.patch(
+            f"/api/dm/warbands/{wb['id']}/members/{m1['id']}",
+            json={"initiative": 10.0},
+        )
+        client.patch(
+            f"/api/dm/warbands/{wb['id']}/members/{m2['id']}",
+            json={"initiative": 10.5},
+        )
+        client.patch(
+            f"/api/dm/warbands/{wb['id']}/members/{m3['id']}",
+            json={"initiative": 10.1},
+        )
+
+        get = client.get(f"/api/dm/warbands/{wb['id']}")
+        members = get.json()["members"]
+        initiatives = [m["initiative"] for m in members]
+        assert initiatives == [10.5, 10.1, 10.0]
 
     def test_update_nonexistent_member(self, client, warband_db_override):
         wb = client.post("/api/dm/warbands", json={"name": "Warband"}).json()

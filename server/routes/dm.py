@@ -4,7 +4,7 @@ import json
 import os
 import re
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from fastapi import APIRouter, HTTPException, Query, UploadFile, File
 from pydantic import BaseModel
@@ -348,7 +348,8 @@ def _collect_names(data: Any, names: set) -> None:
             _collect_names(item, names)
 
 
-def _extract_pdf_text(file: UploadFile) -> str:
+def _extract_pages_text(file: UploadFile) -> List[Tuple[int, str]]:
+    """Extract text per page. Returns list of (page_number, text) tuples."""
     import tempfile
     from pypdf import PdfReader
 
@@ -358,10 +359,9 @@ def _extract_pdf_text(file: UploadFile) -> str:
         tmp.write(content)
         tmp.close()
         reader = PdfReader(tmp.name)
-        text = "\n".join(page.extract_text() or "" for page in reader.pages)
+        return [(i + 1, page.extract_text() or "") for i, page in enumerate(reader.pages)]
     finally:
         os.unlink(tmp.name)
-    return text
 
 
 def _find_creatures_in_text(text: str, names: List[str]) -> Dict[str, int]:
@@ -373,6 +373,97 @@ def _find_creatures_in_text(text: str, names: List[str]) -> Dict[str, int]:
         if count > 0:
             found[name] = count
     return found
+
+
+# ── Encounter Section Parsing ────────────────────────────────────────────
+
+_SKIP_HEADING_WORDS = {"contents", "introduction", "appendix", "chapter",
+                         "credits", "foreword", "bibliography", "index",
+                         "maps", "handouts", "table of"}
+
+
+def _is_encounter_heading(line: str) -> bool:
+    """Check if a text line looks like an encounter/section heading."""
+    stripped = line.strip()
+    if not stripped or len(stripped) < 4 or len(stripped) > 100:
+        return False
+    lower = stripped.lower()
+    if any(s in lower for s in _SKIP_HEADING_WORDS):
+        return False
+    if stripped.startswith("[Page"):
+        return False
+
+    # Numbered heading: "1. GOBLIN AMBUSH", "1A. The Cellar"
+    if re.match(r'^\d+[A-Z]?\.\s+[A-Za-z]', stripped):
+        return True
+
+    # All-caps short phrase (2+ words)
+    if re.match(r'^[A-Z][A-Z\s]{4,60}[A-Z]$', stripped) and len(stripped.split()) >= 2:
+        return True
+
+    # "Area X. Name", "Room X. Name", etc.
+    if re.match(r'^(?:Area|Room|Chamber|Hall)\s+\d+[A-Z]?\.?\s+[A-Za-z]', stripped):
+        return True
+
+    return False
+
+
+def _parse_encounter_sections(
+    pages: List[Tuple[int, str]], names: List[str]
+) -> List[Dict[str, Any]]:
+    """
+    Split adventure text into encounter sections by detecting headings.
+    Each section dict: {name, page, creatures: {name: count}}.
+    Falls back to page-level grouping if no headings found.
+    """
+    full_lines: List[str] = []
+    for page_num, page_text in pages:
+        full_lines.append(f"[Page {page_num}]")
+        for line in page_text.split("\n"):
+            full_lines.append(line)
+
+    sections: List[Dict[str, Any]] = []
+    current = None
+    cur_page = 0
+
+    for line in full_lines:
+        stripped = line.strip()
+        if not stripped:
+            continue
+
+        pm = re.match(r'^\[Page (\d+)\]$', stripped)
+        if pm:
+            cur_page = int(pm.group(1))
+            continue
+
+        if _is_encounter_heading(stripped):
+            if current:
+                sections.append(current)
+            current = {"name": stripped, "page": cur_page, "text": "", "creatures": {}}
+        elif current:
+            current["text"] += stripped + "\n"
+
+    if current:
+        sections.append(current)
+
+    # Find creatures within each section's body text
+    for section in sections:
+        section["creatures"] = _find_creatures_in_text(section["text"], names)
+    sections = [s for s in sections if s["creatures"]]
+
+    # Fallback: page-level grouping if no headings detected
+    if not sections:
+        for page_num, page_text in pages:
+            creatures = _find_creatures_in_text(page_text, names)
+            if creatures:
+                sections.append({
+                    "name": f"Page {page_num}",
+                    "page": page_num,
+                    "text": page_text,
+                    "creatures": creatures,
+                })
+
+    return sections
 
 
 # ── Warbands (SQLite) ─────────────────────────────────────────────────────
@@ -401,7 +492,7 @@ def _init_warband_db():
             creature_data TEXT NOT NULL,
             max_hp INTEGER,
             current_hp INTEGER,
-            initiative INTEGER DEFAULT 0,
+            initiative REAL DEFAULT 0.0,
             notes TEXT DEFAULT '',
             FOREIGN KEY (warband_id) REFERENCES warbands(id) ON DELETE CASCADE
         )
@@ -437,14 +528,24 @@ class WarbandMemberCreate(BaseModel):
 class WarbandMemberUpdate(BaseModel):
     current_hp: Optional[int] = None
     max_hp: Optional[int] = None
-    initiative: Optional[int] = None
+    initiative: Optional[float] = None
     notes: Optional[str] = None
 
 
 @router.get("/warbands")
-def list_warbands():
+def list_warbands(
+    q: Optional[str] = Query(None),
+    sort_by: str = Query("updated_at", pattern="^(name|created_at|updated_at)$"),
+    sort_order: str = Query("desc", pattern="^(asc|desc)$"),
+):
+    sql = "SELECT id, name, created_at, updated_at FROM warbands"
+    params: list = []
+    if q:
+        sql += " WHERE name LIKE ?"
+        params.append(f"%{q}%")
+    sql += f" ORDER BY {sort_by} {'ASC' if sort_order == 'asc' else 'DESC'}"
     with _warband_conn() as conn:
-        rows = conn.execute("SELECT id, name, created_at, updated_at FROM warbands ORDER BY updated_at DESC").fetchall()
+        rows = conn.execute(sql, params).fetchall()
         return {"warbands": [dict(r) for r in rows]}
 
 
@@ -527,49 +628,69 @@ def upload_pdf(file: UploadFile = File(...)):
     if not file.filename or not file.filename.lower().endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Only PDF files are supported")
 
-    text = _extract_pdf_text(file)
-    if not text.strip():
+    pages = _extract_pages_text(file)
+    all_text = "\n".join(t for _, t in pages)
+    if not all_text.strip():
         raise HTTPException(status_code=400, detail="Could not extract text from PDF")
 
     names = _get_creature_names()
-    found = _find_creatures_in_text(text, names)
-    if not found:
+    has_any = _find_creatures_in_text(all_text, names)
+    if not has_any:
         raise HTTPException(status_code=404, detail="No known creatures found in PDF")
 
-    warband_name = Path(file.filename).stem
+    sections = _parse_encounter_sections(pages, names)
+    if not sections:
+        raise HTTPException(status_code=404, detail="No known creatures found in PDF")
+
+    adventure_name = Path(file.filename).stem
+    warbands_created = []
+    _all_unmatched: List[str] = []
+
     with _warband_conn() as conn:
-        cur = conn.execute("INSERT INTO warbands (name) VALUES (?)", (warband_name,))
-        warband_id = cur.lastrowid
+        for section in sections:
+            warband_name = f"[{adventure_name} & p.{section['page']}] {section['name']}"
 
-        members_added = 0
-        creature_summary = []
-        for cname, cnt in found.items():
-            creature_data = _find_entry(_load_json("creatures.json"), cname) \
-                or _find_entry(_load_json("monsters.json"), cname) \
-                or _find_entry(_load_json("npcs.json"), cname)
-            if not creature_data:
-                creature_summary.append({"name": cname, "count": cnt, "matched": False})
-                continue
+            cur = conn.execute("INSERT INTO warbands (name) VALUES (?)", (warband_name,))
+            warband_id = cur.lastrowid
 
-            hp_str = creature_data.get("hp", "")
-            m = re.search(r"(\d+)", hp_str)
-            hp = int(m.group(1)) if m else None
+            members_added = 0
+            creature_summary = []
 
-            for _ in range(min(cnt, 20)):
-                cur = conn.execute(
-                    "INSERT INTO warband_members (warband_id, name, creature_data, max_hp, current_hp) VALUES (?, ?, ?, ?, ?)",
-                    (warband_id, cname, json.dumps(creature_data), hp, hp),
-                )
-                members_added += 1
+            for cname, cnt in section["creatures"].items():
+                creature_data = _find_entry(_load_json("creatures.json"), cname) \
+                    or _find_entry(_load_json("monsters.json"), cname) \
+                    or _find_entry(_load_json("npcs.json"), cname)
+                if not creature_data:
+                    creature_summary.append({"name": cname, "count": cnt, "matched": False})
+                    if cname not in _all_unmatched:
+                        _all_unmatched.append(cname)
+                    continue
 
-            creature_summary.append({"name": cname, "count": cnt, "matched": True})
+                hp_str = creature_data.get("hp", "")
+                m = re.search(r"(\d+)", hp_str)
+                hp = int(m.group(1)) if m else None
 
-        conn.execute("UPDATE warbands SET updated_at = CURRENT_TIMESTAMP WHERE id = ?", (warband_id,))
+                for _ in range(min(cnt, 20)):
+                    conn.execute(
+                        "INSERT INTO warband_members (warband_id, name, creature_data, max_hp, current_hp) VALUES (?, ?, ?, ?, ?)",
+                        (warband_id, cname, json.dumps(creature_data), hp, hp),
+                    )
+                    members_added += 1
+
+                creature_summary.append({"name": cname, "count": cnt, "matched": True})
+
+            conn.execute("UPDATE warbands SET updated_at = CURRENT_TIMESTAMP WHERE id = ?", (warband_id,))
+
+            warbands_created.append({
+                "warband_id": warband_id,
+                "warband_name": warband_name,
+                "members_added": members_added,
+                "creatures": creature_summary,
+            })
+
         conn.commit()
 
     return {
-        "warband_id": warband_id,
-        "warband_name": warband_name,
-        "members_added": members_added,
-        "creatures": creature_summary,
+        "warbands": warbands_created,
+        "unmatched_names": _all_unmatched if _all_unmatched else None,
     }

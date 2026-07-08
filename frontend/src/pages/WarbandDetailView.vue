@@ -170,6 +170,7 @@ onMounted(load)
             <input
               v-if="editingMember === m.id"
               type="number"
+              step="any"
               v-model.number="editInitiative"
               class="inline-input sm"
               @keyup.enter="saveEdit(m)"
