@@ -6,7 +6,7 @@ import re
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, UploadFile, File
 from pydantic import BaseModel
 
 router = APIRouter(prefix="/api/dm", tags=["dm"])
@@ -301,6 +301,80 @@ def get_planes(q: str = Query("")):
     return {"results": results[:200]}
 
 
+# ── PDF Upload ────────────────────────────────────────────────────────────
+
+_CREATURE_NAMES_CACHE: Optional[List[str]] = None
+
+
+def _get_creature_names() -> List[str]:
+    global _CREATURE_NAMES_CACHE
+    if _CREATURE_NAMES_CACHE is not None:
+        return _CREATURE_NAMES_CACHE
+    names: set = set()
+    for fname in ["creatures.json", "monsters.json", "npcs.json"]:
+        try:
+            data = _load_json(fname)
+            _collect_names(data, names)
+        except Exception:
+            continue
+    _CREATURE_NAMES_CACHE = sorted(names, key=lambda n: (-len(n), n))
+    return _CREATURE_NAMES_CACHE
+
+
+def _is_creature_name(name: str) -> bool:
+    skip_prefixes = ["appendix", "variant:", "armor,", "melee", "ranged",
+                     "grapple", "a legendary", "multiattack"]
+    lower = name.lower()
+    if any(lower.startswith(p) for p in skip_prefixes):
+        return False
+    if "," in name or ":" in name:
+        return False
+    if len(name) > 40:
+        return False
+    return True
+
+
+def _collect_names(data: Any, names: set) -> None:
+    if isinstance(data, dict):
+        for key, value in data.items():
+            if key == "content":
+                continue
+            if isinstance(value, dict) and "content" in value:
+                if _is_creature_name(key):
+                    names.add(key)
+            _collect_names(value, names)
+    elif isinstance(data, list):
+        for item in data:
+            _collect_names(item, names)
+
+
+def _extract_pdf_text(file: UploadFile) -> str:
+    import tempfile
+    from pypdf import PdfReader
+
+    content = file.file.read()
+    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
+    try:
+        tmp.write(content)
+        tmp.close()
+        reader = PdfReader(tmp.name)
+        text = "\n".join(page.extract_text() or "" for page in reader.pages)
+    finally:
+        os.unlink(tmp.name)
+    return text
+
+
+def _find_creatures_in_text(text: str, names: List[str]) -> Dict[str, int]:
+    text_lower = text.lower()
+    found: Dict[str, int] = {}
+    for name in names:
+        name_lower = name.lower()
+        count = text_lower.count(name_lower)
+        if count > 0:
+            found[name] = count
+    return found
+
+
 # ── Warbands (SQLite) ─────────────────────────────────────────────────────
 
 import sqlite3
@@ -446,3 +520,56 @@ def remove_member(warband_id: int, member_id: int):
         conn.execute("UPDATE warbands SET updated_at = CURRENT_TIMESTAMP WHERE id = ?", (warband_id,))
         conn.commit()
         return {"ok": True}
+
+
+@router.post("/warbands/upload-pdf")
+def upload_pdf(file: UploadFile = File(...)):
+    if not file.filename or not file.filename.lower().endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="Only PDF files are supported")
+
+    text = _extract_pdf_text(file)
+    if not text.strip():
+        raise HTTPException(status_code=400, detail="Could not extract text from PDF")
+
+    names = _get_creature_names()
+    found = _find_creatures_in_text(text, names)
+    if not found:
+        raise HTTPException(status_code=404, detail="No known creatures found in PDF")
+
+    warband_name = Path(file.filename).stem
+    with _warband_conn() as conn:
+        cur = conn.execute("INSERT INTO warbands (name) VALUES (?)", (warband_name,))
+        warband_id = cur.lastrowid
+
+        members_added = 0
+        creature_summary = []
+        for cname, cnt in found.items():
+            creature_data = _find_entry(_load_json("creatures.json"), cname) \
+                or _find_entry(_load_json("monsters.json"), cname) \
+                or _find_entry(_load_json("npcs.json"), cname)
+            if not creature_data:
+                creature_summary.append({"name": cname, "count": cnt, "matched": False})
+                continue
+
+            hp_str = creature_data.get("hp", "")
+            m = re.search(r"(\d+)", hp_str)
+            hp = int(m.group(1)) if m else None
+
+            for _ in range(min(cnt, 20)):
+                cur = conn.execute(
+                    "INSERT INTO warband_members (warband_id, name, creature_data, max_hp, current_hp) VALUES (?, ?, ?, ?, ?)",
+                    (warband_id, cname, json.dumps(creature_data), hp, hp),
+                )
+                members_added += 1
+
+            creature_summary.append({"name": cname, "count": cnt, "matched": True})
+
+        conn.execute("UPDATE warbands SET updated_at = CURRENT_TIMESTAMP WHERE id = ?", (warband_id,))
+        conn.commit()
+
+    return {
+        "warband_id": warband_id,
+        "warband_name": warband_name,
+        "members_added": members_added,
+        "creatures": creature_summary,
+    }

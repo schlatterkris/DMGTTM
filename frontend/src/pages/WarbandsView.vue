@@ -7,6 +7,10 @@ const warbands = ref([])
 const newName = ref('')
 const loading = ref(false)
 
+const uploading = ref(false)
+const uploadResult = ref(null)
+const uploadError = ref('')
+
 const API = '/api/dm'
 
 async function load() {
@@ -38,6 +42,38 @@ function open(id) {
     router.push(`/warbands/${id}`)
 }
 
+const pdfFile = ref(null)
+
+function onFileSelected(e) {
+    pdfFile.value = e.target.files[0] || null
+    uploadResult.value = null
+    uploadError.value = ''
+}
+
+async function uploadPdf() {
+    if (!pdfFile.value) return
+    uploading.value = true
+    uploadResult.value = null
+    uploadError.value = ''
+
+    const form = new FormData()
+    form.append('file', pdfFile.value)
+
+    try {
+        const res = await fetch(`${API}/warbands/upload-pdf`, { method: 'POST', body: form })
+        const data = await res.json()
+        if (!res.ok) {
+            uploadError.value = data.detail || 'Upload failed'
+        } else {
+            uploadResult.value = data
+        }
+    } catch (err) {
+        uploadError.value = err.message || 'Network error'
+    } finally {
+        uploading.value = false
+    }
+}
+
 onMounted(load)
 </script>
 
@@ -49,6 +85,39 @@ onMounted(load)
     <div class="create-bar">
       <input v-model="newName" placeholder="New warband name..." @keyup.enter="create" />
       <button class="btn-accent" @click="create">Create</button>
+    </div>
+
+    <div class="pdf-section">
+      <div class="pdf-header">Upload PDF</div>
+      <p class="pdf-desc">Upload an adventure PDF to auto-detect creatures and build a warband.</p>
+      <div class="pdf-controls">
+        <input type="file" accept=".pdf" @change="onFileSelected" class="file-input" />
+        <button class="btn-pdf" :disabled="!pdfFile || uploading" @click="uploadPdf">
+          {{ uploading ? 'Processing...' : 'Upload & Create Warband' }}
+        </button>
+      </div>
+
+      <div v-if="uploadError" class="pdf-error">{{ uploadError }}</div>
+
+      <div v-if="uploadResult" class="pdf-result">
+        <div class="result-header">
+          <span class="result-icon">&#10003;</span>
+          Warband <strong>{{ uploadResult.warband_name }}</strong> created
+          ({{ uploadResult.members_added }} members)
+        </div>
+        <div class="result-creatures">
+          <div v-for="c in uploadResult.creatures" :key="c.name" class="result-creature"
+               :class="{ matched: c.matched, unmatched: !c.matched }">
+            <span class="creature-icon">{{ c.matched ? '&#10003;' : '&#10007;' }}</span>
+            <span class="creature-name">{{ c.name }}</span>
+            <span class="creature-count">&times;{{ c.count }}</span>
+            <span v-if="!c.matched" class="creature-note">not in database</span>
+          </div>
+        </div>
+        <button class="btn-accent" @click="open(uploadResult.warband_id)">
+          View Warband &rarr;
+        </button>
+      </div>
     </div>
 
     <div v-if="loading" class="status">Loading...</div>
@@ -166,4 +235,107 @@ h1 {
 .empty {
   color: #666;
 }
+
+/* PDF Upload Section */
+.pdf-section {
+  background: #151515;
+  border: 1px solid #333;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 24px;
+}
+.pdf-header {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #ffa36b;
+  margin-bottom: 4px;
+}
+.pdf-desc {
+  color: #888;
+  font-size: 13px;
+  margin-bottom: 14px;
+}
+.pdf-controls {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.file-input {
+  color: #ccc;
+  font-size: 13px;
+}
+.file-input::file-selector-button {
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: 1px solid #555;
+  background: #2a2a2a;
+  color: #f2f2f2;
+  cursor: pointer;
+  font-size: 13px;
+  margin-right: 10px;
+}
+.file-input::file-selector-button:hover {
+  background: #333;
+}
+.btn-pdf {
+  padding: 9px 20px;
+  border-radius: 8px;
+  border: 1px solid #ffa36b;
+  background: transparent;
+  color: #ffa36b;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 13px;
+  transition: background 0.15s;
+}
+.btn-pdf:hover:not(:disabled) {
+  background: #ffa36b22;
+}
+.btn-pdf:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.pdf-error {
+  margin-top: 12px;
+  color: #ff6b6b;
+  font-size: 13px;
+  padding: 8px 12px;
+  background: #ff6b6b11;
+  border-radius: 6px;
+}
+.pdf-result {
+  margin-top: 14px;
+  padding: 14px;
+  background: #1e1e1e;
+  border-radius: 8px;
+}
+.result-header {
+  font-size: 14px;
+  color: #7ddf7d;
+  margin-bottom: 10px;
+}
+.result-icon {
+  margin-right: 6px;
+}
+.result-creatures {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.result-creature {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+.result-creature.matched .creature-icon { color: #7ddf7d; }
+.result-creature.unmatched .creature-icon { color: #ff6b6b; }
+.creature-icon { font-size: 14px; }
+.creature-name { font-weight: 600; color: #f2f2f2; }
+.creature-count { color: #888; }
+.creature-note { color: #ff6b6b; font-size: 12px; font-style: italic; }
 </style>
