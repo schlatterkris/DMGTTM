@@ -2,6 +2,7 @@
 
 import json
 import os
+import re
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -34,11 +35,8 @@ def _flatten_entries(data: Any, path: str = "") -> List[Dict[str, Any]]:
                     entry = {"name": key, "path": current_path}
                     content = value["content"]
                     if isinstance(content, list):
-                        entry["text"] = " ".join(
-                            str(c) if not isinstance(c, dict) else json.dumps(c)
-                            for c in content
-                        )
-                        _extract_stats_from_content(entry, content)
+                        parsed = _parse_stat_block(content)
+                        entry.update(parsed)
                     else:
                         entry["text"] = str(content)
                     results.append(entry)
@@ -46,8 +44,9 @@ def _flatten_entries(data: Any, path: str = "") -> List[Dict[str, Any]]:
                 if sub:
                     results.extend(_flatten_entries(sub, current_path))
             elif isinstance(value, list):
-                entry = {"name": key, "path": current_path, "text": json.dumps(value)}
-                _extract_stats_from_content(entry, value)
+                entry = {"name": key, "path": current_path}
+                parsed = _parse_stat_block(value)
+                entry.update(parsed)
                 results.append(entry)
     elif isinstance(data, list):
         for i, item in enumerate(data):
@@ -58,19 +57,85 @@ def _flatten_entries(data: Any, path: str = "") -> List[Dict[str, Any]]:
     return results
 
 
-def _extract_stats_from_content(entry: Dict[str, Any], content: list) -> None:
-    """Extract AC, HP, speed from content list into entry."""
+def _parse_stat_block(content: list) -> Dict[str, Any]:
+    """Parse a creature/NPC stat block content array into structured sections."""
+    result = {"text": " ".join(
+        str(c) if not isinstance(c, dict) else json.dumps(c)
+        for c in content
+    )}
+
+    current_section = None
+    traits = []
+    actions = []
+    reactions = []
+    legendary_actions = []
+    remaining = []
+
     for item in content:
-        if not isinstance(item, str):
-            continue
-        if item.startswith("**Armor Class**"):
-            entry["ac"] = item.replace("**Armor Class**", "").strip()
-        elif item.startswith("**Hit Points**"):
-            entry["hp"] = item.replace("**Hit Points**", "").strip()
-        elif item.startswith("**Speed**"):
-            entry["speed"] = item.replace("**Speed**", "").strip()
-        elif item.startswith("*") and "beast" in item.lower() or "humanoid" in item.lower():
-            entry["type_line"] = item
+        if isinstance(item, str):
+            s = item
+            if s.startswith("**Armor Class**"):
+                result["ac"] = s.split("**Armor Class**", 1)[-1].strip()
+            elif s.startswith("**Hit Points**"):
+                result["hp"] = s.split("**Hit Points**", 1)[-1].strip()
+            elif s.startswith("**Speed**"):
+                result["speed"] = s.split("**Speed**", 1)[-1].strip()
+            elif "type_line" not in result and re.match(r"^\*[^*]", s) and s.strip().endswith("*"):
+                result["type_line"] = s
+            elif s.startswith("**Saving Throws**"):
+                result["saving_throws"] = s.split("**Saving Throws**", 1)[-1].strip()
+            elif s.startswith("**Skills**"):
+                result["skills"] = s.split("**Skills**", 1)[-1].strip()
+            elif s.startswith("**Damage Vulnerabilities**"):
+                result["damage_vulnerabilities"] = s.split("**Damage Vulnerabilities**", 1)[-1].strip()
+            elif s.startswith("**Damage Resistances**") or s.startswith("**Damage Resistance**"):
+                result["damage_resistances"] = re.split(r"\*\*Damage Resistances?\*\*", s)[-1].strip()
+            elif s.startswith("**Damage Immunities**"):
+                result["damage_immunities"] = s.split("**Damage Immunities**", 1)[-1].strip()
+            elif s.startswith("**Condition Immunities**"):
+                result["condition_immunities"] = s.split("**Condition Immunities**", 1)[-1].strip()
+            elif s.startswith("**Senses**"):
+                result["senses"] = s.split("**Senses**", 1)[-1].strip()
+            elif s.startswith("**Languages**"):
+                result["languages"] = s.split("**Languages**", 1)[-1].strip()
+            elif s.startswith("**Challenge**"):
+                result["challenge"] = s.split("**Challenge**", 1)[-1].strip()
+            elif s.startswith("**Actions**"):
+                current_section = "actions"
+            elif s.startswith("**Reactions**"):
+                current_section = "reactions"
+            elif s.startswith("**Legendary Actions**"):
+                current_section = "legendary_actions"
+            elif s.startswith("***"):
+                if current_section == "actions":
+                    actions.append(s)
+                elif current_section == "reactions":
+                    reactions.append(s)
+                elif current_section == "legendary_actions":
+                    legendary_actions.append(s)
+                else:
+                    traits.append(s)
+            else:
+                remaining.append(s)
+        elif isinstance(item, dict) and "table" in item:
+            table = item["table"]
+            result["abilities"] = {
+                k.lower(): (v[0] if isinstance(v, list) and v else str(v))
+                for k, v in table.items()
+            }
+
+    if traits:
+        result["traits"] = traits
+    if actions:
+        result["actions"] = actions
+    if reactions:
+        result["reactions"] = reactions
+    if legendary_actions:
+        result["legendary_actions"] = legendary_actions
+    if remaining:
+        result["remaining"] = remaining
+
+    return result
 
 
 # ── Bestiary (Creatures + Monsters) ────────────────────────────────────────
@@ -123,7 +188,15 @@ def _find_entry(data: Any, name: str) -> Optional[Dict]:
     if isinstance(data, dict):
         for key, value in data.items():
             if key == name and isinstance(value, dict) and "content" in value:
-                return {"name": key, "content": value["content"]}
+                entry = {"name": key}
+                content = value["content"]
+                if isinstance(content, list):
+                    parsed = _parse_stat_block(content)
+                    entry.update(parsed)
+                    entry["content"] = content
+                else:
+                    entry["content"] = content
+                return entry
             result = _find_entry(value, name)
             if result:
                 return result

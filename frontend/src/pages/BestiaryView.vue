@@ -11,6 +11,28 @@ const selected = ref(null)
 
 const API = '/api/dm'
 
+function formatText(text) {
+    if (!text) return ''
+    return text
+        .replace(/\*\*\*([^*]+)\*\*\*/g, '<em><strong>$1</strong></em>')
+        .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+        .replace(/\n/g, '<br>')
+}
+
+function hasDefenses(c) {
+    return c.saving_throws || c.skills || c.damage_vulnerabilities ||
+        c.damage_resistances || c.damage_immunities || c.condition_immunities ||
+        c.senses || c.languages
+}
+
+function hasAnyBoxedContent(c) {
+    return c.ac || c.hp || c.speed || c.abilities || hasDefenses(c) ||
+        c.challenge || (c.traits && c.traits.length) ||
+        (c.actions && c.actions.length) || (c.reactions && c.reactions.length) ||
+        (c.legendary_actions && c.legendary_actions.length)
+}
+
 async function search() {
     loading.value = true
     const params = new URLSearchParams()
@@ -69,35 +91,88 @@ onMounted(search)
         <button class="close-btn" @click="closeDetail">×</button>
         <h2>{{ selected.name }}</h2>
         <div v-if="selected.type_line" class="type-line" v-html="formatText(selected.type_line)"></div>
-        <div class="detail-section" v-if="selected.ac">
-          <strong>AC:</strong> {{ selected.ac }}
+
+        <!-- Core Stats -->
+        <div class="stat-box core-stats" v-if="selected.ac || selected.hp || selected.speed">
+          <div class="box-title">Core Stats</div>
+          <div class="core-grid">
+            <div class="core-item" v-if="selected.ac">
+              <span class="core-label">AC</span>
+              <span class="core-value">{{ selected.ac }}</span>
+            </div>
+            <div class="core-item" v-if="selected.hp">
+              <span class="core-label">HP</span>
+              <span class="core-value">{{ selected.hp }}</span>
+            </div>
+            <div class="core-item" v-if="selected.speed">
+              <span class="core-label">Speed</span>
+              <span class="core-value">{{ selected.speed }}</span>
+            </div>
+          </div>
         </div>
-        <div class="detail-section" v-if="selected.hp">
-          <strong>HP:</strong> {{ selected.hp }}
+
+        <!-- Ability Scores -->
+        <div class="stat-box abilities" v-if="selected.abilities">
+          <div class="box-title">Abilities</div>
+          <div class="abilities-grid">
+            <div v-for="(val, key) in selected.abilities" :key="key" class="ability-item">
+              <div class="ability-name">{{ key.toUpperCase() }}</div>
+              <div class="ability-value">{{ val }}</div>
+            </div>
+          </div>
         </div>
-        <div class="detail-section" v-if="selected.speed">
-          <strong>Speed:</strong> {{ selected.speed }}
+
+        <!-- Defenses & Senses -->
+        <div class="stat-box defenses" v-if="hasDefenses(selected)">
+          <div class="box-title">Defenses &amp; Senses</div>
+          <div v-if="selected.saving_throws" class="stat-line"><strong>Saving Throws</strong> {{ selected.saving_throws }}</div>
+          <div v-if="selected.skills" class="stat-line"><strong>Skills</strong> {{ selected.skills }}</div>
+          <div v-if="selected.damage_vulnerabilities" class="stat-line"><strong>Dmg. Vulnerabilities</strong> {{ selected.damage_vulnerabilities }}</div>
+          <div v-if="selected.damage_resistances" class="stat-line"><strong>Dmg. Resistances</strong> {{ selected.damage_resistances }}</div>
+          <div v-if="selected.damage_immunities" class="stat-line"><strong>Dmg. Immunities</strong> {{ selected.damage_immunities }}</div>
+          <div v-if="selected.condition_immunities" class="stat-line"><strong>Cond. Immunities</strong> {{ selected.condition_immunities }}</div>
+          <div v-if="selected.senses" class="stat-line"><strong>Senses</strong> {{ selected.senses }}</div>
+          <div v-if="selected.languages" class="stat-line"><strong>Languages</strong> {{ selected.languages }}</div>
         </div>
-        <div class="detail-text" v-if="selected.text" v-html="formatText(selected.text)"></div>
+
+        <!-- Challenge -->
+        <div class="stat-box challenge" v-if="selected.challenge">
+          <div class="box-title">Challenge</div>
+          <div class="stat-line">{{ selected.challenge }}</div>
+        </div>
+
+        <!-- Traits -->
+        <div class="stat-box traits" v-if="selected.traits && selected.traits.length">
+          <div class="box-title">Traits</div>
+          <div v-for="(t, i) in selected.traits" :key="i" class="stat-line" v-html="formatText(t)"></div>
+        </div>
+
+        <!-- Actions -->
+        <div class="stat-box actions-box" v-if="selected.actions && selected.actions.length">
+          <div class="box-title">Actions</div>
+          <div v-for="(a, i) in selected.actions" :key="i" class="stat-line" v-html="formatText(a)"></div>
+        </div>
+
+        <!-- Reactions -->
+        <div class="stat-box reactions" v-if="selected.reactions && selected.reactions.length">
+          <div class="box-title">Reactions</div>
+          <div v-for="(r, i) in selected.reactions" :key="i" class="stat-line" v-html="formatText(r)"></div>
+        </div>
+
+        <!-- Legendary Actions -->
+        <div class="stat-box legendary" v-if="selected.legendary_actions && selected.legendary_actions.length">
+          <div class="box-title">Legendary Actions</div>
+          <div v-for="(la, i) in selected.legendary_actions" :key="i" class="stat-line" v-html="formatText(la)"></div>
+        </div>
+
+        <!-- Fallback for anything not parsed -->
+        <div class="detail-text" v-if="selected.remaining && selected.remaining.length" v-html="formatText(selected.remaining.join('\n\n'))"></div>
+
         <button class="btn-accent" @click="addToWarband(selected)">Add to Warband</button>
       </div>
     </div>
   </div>
 </template>
-
-<script>
-export default {
-  methods: {
-    formatText(text) {
-      if (!text) return ''
-      return text
-        .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-        .replace(/\*([^*]+)\*/g, '<em>$1</em>')
-        .replace(/\n/g, '<br>')
-    }
-  }
-}
-</script>
 
 <style scoped>
 .page {
@@ -204,9 +279,7 @@ h1 {
   position:absolute; top:16px; right:16px;
   background:none; border:none; color:#888; font-size:24px; cursor:pointer;
 }
-.type-line { color:#aaa; margin-bottom:12px; font-style:italic; }
-.detail-section { margin:8px 0; color:#ccc; }
-.detail-section strong { color:#f2f2f2; }
+.type-line { color:#aaa; margin-bottom:14px; font-style:italic; font-size:14px; }
 .detail-text { color:#bbb; margin:16px 0; line-height:1.6; }
 .btn-accent {
   margin-top:16px;
@@ -217,5 +290,111 @@ h1 {
   color:#1a1a1a;
   font-weight:700;
   cursor:pointer;
+}
+
+/* Stat Boxes */
+.stat-box {
+  background: #151515;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 12px;
+}
+.stat-box .box-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #888;
+  margin-bottom: 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #2a2a2a;
+}
+.stat-line {
+  font-size: 13px;
+  color: #ccc;
+  line-height: 1.6;
+  margin-bottom: 4px;
+}
+.stat-line:last-child { margin-bottom: 0; }
+.stat-line strong { color: #f2f2f2; font-weight: 600; }
+.stat-line em { color: #aaa; }
+
+/* Core Stats Grid */
+.core-grid {
+  display: flex;
+  gap: 12px;
+}
+.core-item {
+  flex: 1;
+  text-align: center;
+  background: #1e1e1e;
+  border-radius: 8px;
+  padding: 10px 8px;
+}
+.core-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #888;
+  margin-bottom: 4px;
+}
+.core-value {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: #f2f2f2;
+}
+
+/* Abilities Grid */
+.abilities-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 6px;
+}
+.ability-item {
+  text-align: center;
+  background: #1e1e1e;
+  border-radius: 8px;
+  padding: 8px 4px;
+}
+.ability-name {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #888;
+  margin-bottom: 2px;
+}
+.ability-value {
+  font-size: 13px;
+  font-weight: 600;
+  color: #f2f2f2;
+}
+
+/* Defenses box singles out */
+.defenses .stat-line:first-child { margin-top: 0; }
+
+/* Challenge box */
+.challenge .stat-line { font-size: 14px; font-weight: 600; color: #f2f2f2; }
+
+/* Traits, Actions, Reactions, Legendary */
+.traits .stat-line,
+.actions-box .stat-line,
+.reactions .stat-line,
+.legendary .stat-line {
+  margin-bottom: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #252525;
+}
+.traits .stat-line:last-child,
+.actions-box .stat-line:last-child,
+.reactions .stat-line:last-child,
+.legendary .stat-line:last-child {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
 }
 </style>
